@@ -5,7 +5,7 @@ import json
 
 # **UPDATE THIS LINE:**
 DEVICE_PATH = '/dev/input/by-id/usb-IC_Reader_IC_Reader_08FF20171101-event-kbd'
-API_URL = 'http://127.0.0.1:8000/api/attendance/record/' # Replace with your Django API URL
+API_URL = 'http://192.168.1.68:8000/api/attendance/record/' # Replace with your Django API URL
 
 try:
     device = InputDevice(DEVICE_PATH)
