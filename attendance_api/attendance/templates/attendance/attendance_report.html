@@ -21,13 +21,22 @@
                     <label for="employee_search" class="form-label">Employee ID or Name:</label>
                     <input type="text" id="employee_search" name="employee" class="form-control" placeholder="Employee ID or Name" value="{{ employee_query|default:'' }}">
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
-                    <a href="{% url 'attendance:export_attendance_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}&employee={{ employee_query|default:'' }}" class="btn btn-success w-100">Export to CSV</a>
+                <div class="col-md-2">
+                    <label for="attendance_type_filter" class="form-label">Type:</label>
+                    <select id="attendance_type_filter" name="attendance_type" class="form-select">
+                        <option value="ALL" {% if attendance_type_filter == 'ALL' or not attendance_type_filter %}selected{% endif %}>All Types</option>
+                        {% for value, label in ATTENDANCE_CHOICES %}
+                            <option value="{{ value }}" {% if attendance_type_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 d-flex justify-content-end mt-3"> {# Changed to col-12 and added mt-3 #}
+                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                    <a href="{% url 'attendance:export_attendance_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}&employee={{ employee_query|default:'' }}&attendance_type={{ attendance_type_filter|default:'ALL' }}" class="btn btn-success">Export to CSV</a>
                 </div>
             </form>
 
-            <hr>
+            <hr class="my-4"> {# Added margin for separator #}
 
             {% if attendance_records %}
                 <div class="table-responsive">
@@ -37,6 +46,7 @@
                                 <th>Employee ID</th>
                                 <th>Employee Name</th>
                                 <th>Timestamp</th>
+                                <th>Type</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -45,6 +55,7 @@
                                     <td>{{ record.employee.employee_id }}</td>
                                     <td>{{ record.employee.name }}</td>
                                     <td>{{ record.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ record.get_attendance_type_display }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>

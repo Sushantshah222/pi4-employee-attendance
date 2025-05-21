@@ -4,60 +4,64 @@
 
 {% block content %}
     <div class="card mt-4">
-        <div class="card-header bg-danger text-white">
+        <div class="card-header bg-danger text-white"> {# Changed header color to danger for absence #}
             <h1 class="card-title mb-0">Absentee Report</h1>
         </div>
         <div class="card-body">
             <form method="get" action="{% url 'attendance:absentee_report' %}" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label for="date" class="form-label">Select Date:</label>
-                    <input type="date" id="date" name="date" class="form-control" value="{{ report_date|date:'Y-m-d'|default:'' }}">
+                    <label for="starting_date" class="form-label">Start Date:</label>
+                    <input type="date" id="starting_date" name="starting_date" class="form-control" value="{{ starting_date|date:'Y-m-d'|default:'' }}">
                 </div>
-                <div class="col-md-8 d-flex align-items-end">
-                    <button type="submit" class="btn btn-danger w-100 me-2">Generate Report</button>
-                    {% if report_date and not is_weekend %}
-                        <a href="{% url 'attendance:export_absentee_csv' %}?date={{ report_date|date:'Y-m-d' }}" class="btn btn-outline-danger w-100">Export to CSV</a>
-                    {% endif %}
+                <div class="col-md-4">
+                    <label for="ending_date" class="form-label">End Date:</label>
+                    <input type="date" id="ending_date" name="ending_date" class="form-control" value="{{ ending_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-danger w-100 me-2">Generate Report</button> {# Red button #}
+                    <a href="{% url 'attendance:export_absentee_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}" class="btn btn-outline-danger w-100">Export to CSV</a> {# Red outline button #}
                 </div>
             </form>
 
-            <hr>
+            <hr class="my-4">
 
-            {% if report_date %}
-                <h3>Absentee Report for {{ report_date|date:"F d, Y" }}</h3>
-                {% if is_weekend %}
-                    <div class="alert alert-info mt-3" role="alert">
-                        This is a weekend. No employees are considered absent for a working day.
-                    </div>
-                {% elif absent_employees %}
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Employee ID</th>
-                                    <th>Employee Name</th>
-                                    <th>RFID Tag</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for employee in absent_employees %}
+            {% if error_message %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    {{ error_message }}
+                </div>
+            {% elif absentee_data %}
+                {% for day_data in absentee_data %}
+                    <h4 class="mt-4 border-bottom pb-2">Absentee Report for {{ day_data.date|date:"F d, Y" }}</h4> {# Added border and padding #}
+                    {% if day_data.absent_employees %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
                                     <tr>
-                                        <td>{{ employee.employee_id }}</td>
-                                        <td>{{ employee.name }}</td>
-                                        <td>{{ employee.rfid_tag|default:"N/A" }}</td>
+                                        <th>Employee ID</th>
+                                        <th>Employee Name</th>
+                                        <th>RFID Tag</th>
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="alert alert-success mt-3" role="alert">
-                        All employees were present on {{ report_date|date:"F d, Y" }}.
-                    </div>
-                {% endif %}
+                                </thead>
+                                <tbody>
+                                    {% for employee in day_data.absent_employees %}
+                                        <tr>
+                                            <td>{{ employee.employee_id }}</td>
+                                            <td>{{ employee.name }}</td>
+                                            <td>{{ employee.rfid_tag|default:"N/A" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success mt-3" role="alert">
+                            All employees were present on {{ day_data.date|date:"F d, Y" }}.
+                        </div>
+                    {% endif %}
+                {% endfor %}
             {% else %}
-                <div class="alert alert-warning mt-3" role="alert">
-                    Please select a date to generate the absentee report.
+                <div class="alert alert-info mt-3" role="alert">
+                    Please select a date range to generate the absentee report.
                 </div>
             {% endif %}
         </div>

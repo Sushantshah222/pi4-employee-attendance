@@ -10,50 +10,60 @@
         <div class="card-body">
             <form method="get" action="{% url 'attendance:late_comers_report' %}" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label for="date" class="form-label">Select Date:</label>
-                    <input type="date" id="date" name="date" class="form-control" value="{{ report_date|date:'Y-m-d'|default:'' }}">
+                    <label for="starting_date" class="form-label">Start Date:</label>
+                    <input type="date" id="starting_date" name="starting_date" class="form-control" value="{{ starting_date|date:'Y-m-d'|default:'' }}">
                 </div>
-                <div class="col-md-8 d-flex align-items-end">
+                <div class="col-md-4">
+                    <label for="ending_date" class="form-label">End Date:</label>
+                    <input type="date" id="ending_date" name="ending_date" class="form-control" value="{{ ending_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
                     <button type="submit" class="btn btn-warning w-100 me-2">Generate Report</button>
-                    {% if report_date %}
-                        <a href="{% url 'attendance:export_late_comers_csv' %}?date={{ report_date|date:'Y-m-d' }}" class="btn btn-outline-warning w-100">Export to CSV</a>
-                    {% endif %}
+                    <a href="{% url 'attendance:export_late_comers_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}" class="btn btn-outline-warning w-100">Export to CSV</a>
                 </div>
             </form>
 
             <hr>
 
-            {% if report_date %}
-                <h3>Late Comers Report for {{ report_date|date:"F d, Y" }} (Standard Start Time: {{ standard_start_time|time:"H:i" }})</h3>
-                {% if late_comers %}
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Employee ID</th>
-                                    <th>Employee Name</th>
-                                    <th>First Scan Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in late_comers %}
+            {% if error_message %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    {{ error_message }}
+                </div>
+            {% elif late_comers_data %}
+                {% for day_data in late_comers_data %}
+                    <h4 class="mt-4">Late Comers for {{ day_data.date|date:"F d, Y" }} (Standard Start Time: {{ standard_start_time|time:"H:i" }})</h4>
+                    {% if day_data.late_comers %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
                                     <tr>
-                                        <td>{{ item.employee.employee_id }}</td>
-                                        <td>{{ item.employee.name }}</td>
-                                        <td>{{ item.first_scan_time|date:"H:i:s" }}</td>
+                                        <th>Employee ID</th>
+                                        <th>Employee Name</th>
+                                        <th>First Scan Time</th>
+                                        <th>Type</th>
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="alert alert-success mt-3" role="alert">
-                        No late comers found on {{ report_date|date:"F d, Y" }}.
-                    </div>
-                {% endif %}
+                                </thead>
+                                <tbody>
+                                    {% for item in day_data.late_comers %}
+                                        <tr>
+                                            <td>{{ item.employee.employee_id }}</td>
+                                            <td>{{ item.employee.name }}</td>
+                                            <td>{{ item.first_scan_time|date:"H:i:s" }}</td>
+                                            <td>{{ item.attendance_type }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success mt-3" role="alert">
+                            No late comers found on {{ day_data.date|date:"F d, Y" }}.
+                        </div>
+                    {% endif %}
+                {% endfor %}
             {% else %}
-                <div class="alert alert-warning mt-3" role="alert">
-                    Please select a date to generate the late comers report.
+                <div class="alert alert-info mt-3" role="alert">
+                    Please select a date range to generate the late comers report.
                 </div>
             {% endif %}
         </div>
