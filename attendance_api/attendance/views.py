@@ -7,15 +7,33 @@ from django.shortcuts import render
 from django.db.models import Q
 from django.db.models.functions import TruncDate
 
+# NEW IMPORTS FOR SECURITY
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required # For function-based views/APIs if needed
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+# Assuming you use DRF for your RFID endpoint, we'll apply a decorator for security
+from rest_framework.permissions import IsAdminUser # For DRF API views
+
 
 from .models import AttendanceRecord, Employee
 from .serializers import AttendanceRecordSerializer
 
-# --- API Endpoint for RFID Scanner ---
+
+# --- API Endpoint for RFID Scanner (Security: Only Admin/Staff can record attendance) ---
+# For this API endpoint, we'll use DRF's built-in permissions.
+# This assumes your RFID scanner authenticates somehow (e.g., API key, or it's on a secure network).
+# If the RFID scanner itself is a "user" that needs to record,
+# you'd typically have a dedicated user for it and check for that user's permissions,
+# or use a token-based authentication.
+# For simplicity, if ONLY admins should record, IsAdminUser works.
+# If ANY user can record, you might need a different permission or no permission at all for this specific endpoint.
+# Let's assume for now recording is also an admin function, or you'll adjust this later.
 class RecordAttendance(APIView):
+    # Only authenticated users who are staff can access this API
+    permission_classes = [IsAdminUser] # Ensures only Django admin users can hit this endpoint
+
     def post(self, request):
         serializer = AttendanceRecordSerializer(data=request.data)
         if serializer.is_valid():
@@ -23,8 +41,24 @@ class RecordAttendance(APIView):
             return Response({"message": "Attendance recorded successfully", "type": serializer.instance.attendance_type}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# --- General Attendance Report Views (No functional changes here) ---
-class AttendanceReportView(View):
+# --- Base Mixin for Staff/Admin Access ---
+# This custom mixin ensures the user is logged in AND is a staff member.
+class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff # Check if the user has staff status
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            # Redirect to login page if not authenticated
+            return super().handle_no_permission()
+        else:
+            # If authenticated but not staff, render an access denied page or redirect
+            return render(self.request, 'attendance/access_denied.html', status=403) # Create this template
+
+
+# --- General Attendance Report Views ---
+# Apply the new AdminRequiredMixin
+class AttendanceReportView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -69,13 +103,12 @@ class AttendanceReportView(View):
             'ending_date': ending_date,
             'employee_query': employee_query,
             'attendance_type_filter': attendance_type_filter,
-            # CHANGE THIS LINE:
             'ATTENDANCE_CHOICES': AttendanceRecord._meta.get_field('attendance_type').choices
         }
         return render(request, 'attendance/attendance_report.html', context)
 
 
-class ExportAttendanceCSVView(View):
+class ExportAttendanceCSVView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -140,8 +173,8 @@ class ExportAttendanceCSVView(View):
         return response
 
 
-# --- Absentee Report Views (MAJOR CHANGES FOR DATE RANGE AND WEEKEND) ---
-class AbsenteeReportView(View):
+# --- Absentee Report Views ---
+class AbsenteeReportView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -153,12 +186,12 @@ class AbsenteeReportView(View):
             if starting_date_str:
                 start_date = datetime.strptime(starting_date_str, '%Y-%m-%d').date()
             else:
-                start_date = date.today() # Default to today if no start date
+                start_date = date.today()
 
             if ending_date_str:
                 end_date = datetime.strptime(ending_date_str, '%Y-%m-%d').date()
             else:
-                end_date = date.today() # Default to today if no end date
+                end_date = date.today()
 
         except ValueError:
             print("Invalid date format provided for absentee report. Returning empty.")
@@ -169,16 +202,14 @@ class AbsenteeReportView(View):
                 'error_message': 'Invalid date format provided.'
             })
 
-        # Ensure start_date is not after end_date
         if start_date > end_date:
-            start_date, end_date = end_date, start_date # Swap if out of order
+            start_date, end_date = end_date, start_date
 
         current_date_iter = start_date
         while current_date_iter <= end_date:
-            is_weekend = (current_date_iter.weekday() == 5) # Saturday is 5
+            is_weekend = (current_date_iter.weekday() == 5)
 
             if not is_weekend:
-                # Get IDs of employees who have at least one attendance record (of any type) on the current_date_iter
                 present_employees_ids = AttendanceRecord.objects.filter(
                     timestamp__date=current_date_iter
                 ).values_list('employee_id', flat=True).distinct()
@@ -189,7 +220,6 @@ class AbsenteeReportView(View):
                     'date': current_date_iter,
                     'absent_employees': absent_employees_for_day
                 })
-            # else: skip weekend days, don't add them to absentee_data
 
             current_date_iter += timedelta(days=1)
 
@@ -201,7 +231,7 @@ class AbsenteeReportView(View):
         return render(request, 'attendance/absentee_report.html', context)
 
 
-class ExportAbsenteeCSVView(View):
+class ExportAbsenteeCSVView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -229,7 +259,7 @@ class ExportAbsenteeCSVView(View):
             return response
 
         if start_date > end_date:
-            start_date, end_date = end_date, start_date # Swap
+            start_date, end_date = end_date, start_date
 
         filename = "absentee_report"
         if filename_parts:
@@ -244,7 +274,7 @@ class ExportAbsenteeCSVView(View):
 
         current_date_iter = start_date
         while current_date_iter <= end_date:
-            is_weekend = (current_date_iter.weekday() == 5) # Saturday is 5
+            is_weekend = (current_date_iter.weekday() == 5)
 
             if not is_weekend:
                 present_employees_ids = AttendanceRecord.objects.filter(
@@ -264,8 +294,8 @@ class ExportAbsenteeCSVView(View):
         return response
 
 
-# --- Late Comers Report Views (MAJOR CHANGES FOR DATE RANGE AND WEEKEND) ---
-class LateComersReportView(View):
+# --- Late Comers Report Views ---
+class LateComersReportView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -278,12 +308,12 @@ class LateComersReportView(View):
             if starting_date_str:
                 start_date = datetime.strptime(starting_date_str, '%Y-%m-%d').date()
             else:
-                start_date = date.today() # Default to today if no start date
+                start_date = date.today()
 
             if ending_date_str:
                 end_date = datetime.strptime(ending_date_str, '%Y-%m-%d').date()
             else:
-                end_date = date.today() # Default to today if no end date
+                end_date = date.today()
 
         except ValueError:
             print("Invalid date format provided for late comers report. Returning empty.")
@@ -296,11 +326,11 @@ class LateComersReportView(View):
             })
 
         if start_date > end_date:
-            start_date, end_date = end_date, start_date # Swap
+            start_date, end_date = end_date, start_date
 
         current_date_iter = start_date
         while current_date_iter <= end_date:
-            is_weekend = (current_date_iter.weekday() == 5) # Saturday is 5
+            is_weekend = (current_date_iter.weekday() == 5)
 
             if not is_weekend:
                 late_comers_for_day = []
@@ -308,7 +338,7 @@ class LateComersReportView(View):
                     first_late_checkin = AttendanceRecord.objects.filter(
                         employee=employee,
                         timestamp__date=current_date_iter,
-                        attendance_type='LATE_CHECK_IN' # Filter directly for LATE_CHECK_IN
+                        attendance_type='LATE_CHECK_IN'
                     ).order_by('timestamp').first()
 
                     if first_late_checkin:
@@ -317,8 +347,8 @@ class LateComersReportView(View):
                             'first_scan_time': first_late_checkin.timestamp,
                             'attendance_type': first_late_checkin.get_attendance_type_display()
                         })
-                
-                if late_comers_for_day: # Only add if there are late comers for this day
+
+                if late_comers_for_day:
                     late_comers_data.append({
                         'date': current_date_iter,
                         'late_comers': late_comers_for_day
@@ -334,7 +364,7 @@ class LateComersReportView(View):
         return render(request, 'attendance/late_comers_report.html', context)
 
 
-class ExportLateComersCSVView(View):
+class ExportLateComersCSVView(AdminRequiredMixin, View): # ADDED AdminRequiredMixin
     def get(self, request):
         starting_date_str = request.GET.get('starting_date')
         ending_date_str = request.GET.get('ending_date')
@@ -363,7 +393,7 @@ class ExportLateComersCSVView(View):
             return response
 
         if start_date > end_date:
-            start_date, end_date = end_date, start_date # Swap
+            start_date, end_date = end_date, start_date
 
         filename = "late_comers_report"
         if filename_parts:
@@ -378,7 +408,7 @@ class ExportLateComersCSVView(View):
 
         current_date_iter = start_date
         while current_date_iter <= end_date:
-            is_weekend = (current_date_iter.weekday() == 5) # Saturday is 5
+            is_weekend = (current_date_iter.weekday() == 5)
 
             if not is_weekend:
                 for employee in employees:
