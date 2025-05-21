@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}General Attendance Report{% endblock %}
+
+{% block content %}
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="card-title mb-0">General Attendance Report</h1>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'attendance:attendance_report' %}" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="starting_date" class="form-label">Start Date:</label>
+                    <input type="date" id="starting_date" name="starting_date" class="form-control" value="{{ starting_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="ending_date" class="form-label">End Date:</label>
+                    <input type="date" id="ending_date" name="ending_date" class="form-control" value="{{ ending_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="employee_search" class="form-label">Employee ID or Name:</label>
+                    <input type="text" id="employee_search" name="employee" class="form-control" placeholder="Employee ID or Name" value="{{ employee_query|default:'' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 me-2">Filter</button>
+                    <a href="{% url 'attendance:export_attendance_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}&employee={{ employee_query|default:'' }}" class="btn btn-success w-100">Export to CSV</a>
+                </div>
+            </form>
+
+            <hr>
+
+            {% if attendance_records %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Employee Name</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                                <tr>
+                                    <td>{{ record.employee.employee_id }}</td>
+                                    <td>{{ record.employee.name }}</td>
+                                    <td>{{ record.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mt-3" role="alert">
+                    No attendance records found{% if starting_date and ending_date %} for the period from {{ starting_date|date:"F d, Y" }} to {{ ending_date|date:"F d, Y" }}{% elif starting_date %} from {{ starting_date|date:"F d, Y" }}{% elif ending_date %} up to {{ ending_date|date:"F d, Y" }}{% endif %}.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

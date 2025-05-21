@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Late Comers Report{% endblock %}
+
+{% block content %}
+    <div class="card mt-4">
+        <div class="card-header bg-warning text-dark">
+            <h1 class="card-title mb-0">Late Comers Report</h1>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'attendance:late_comers_report' %}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="date" class="form-label">Select Date:</label>
+                    <input type="date" id="date" name="date" class="form-control" value="{{ report_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-8 d-flex align-items-end">
+                    <button type="submit" class="btn btn-warning w-100 me-2">Generate Report</button>
+                    {% if report_date %}
+                        <a href="{% url 'attendance:export_late_comers_csv' %}?date={{ report_date|date:'Y-m-d' }}" class="btn btn-outline-warning w-100">Export to CSV</a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <hr>
+
+            {% if report_date %}
+                <h3>Late Comers Report for {{ report_date|date:"F d, Y" }} (Standard Start Time: {{ standard_start_time|time:"H:i" }})</h3>
+                {% if late_comers %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Employee Name</th>
+                                    <th>First Scan Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in late_comers %}
+                                    <tr>
+                                        <td>{{ item.employee.employee_id }}</td>
+                                        <td>{{ item.employee.name }}</td>
+                                        <td>{{ item.first_scan_time|date:"H:i:s" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success mt-3" role="alert">
+                        No late comers found on {{ report_date|date:"F d, Y" }}.
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-warning mt-3" role="alert">
+                    Please select a date to generate the late comers report.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}
