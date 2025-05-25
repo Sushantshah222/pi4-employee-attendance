@@ -5,8 +5,14 @@ import evdev
 import sys
 import os # Import os for environment variable
 
+<<<<<<< Updated upstream
 # --- Configuration ---
 API_URL = "http://192.168.1.154:8000/api/attendance/record/"
+=======
+# **UPDATE THIS LINE:**
+DEVICE_PATH = '/dev/input/by-id/usb-IC_Reader_IC_Reader_08FF20171101-event-kbd'
+API_URL = 'http://192.168.1.154:8000/api/attendance/record/' # Replace with your Django API URL
+>>>>>>> Stashed changes
 
 # Store your token securely, e.g., as an environment variable
 # For simplicity in development, you can hardcode it, but for production,
