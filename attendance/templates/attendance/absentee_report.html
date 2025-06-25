@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Absentee Report{% endblock %}
+
+{% block content %}
+    <div class="card mt-4">
+        <div class="card-header bg-danger text-white">
+            <h1 class="card-title mb-0">Absentee Report</h1>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'attendance:absentee_report' %}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="starting_date" class="form-label">Start Date:</label>
+                    <input type="date" id="starting_date" name="starting_date" class="form-control" value="{{ starting_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="ending_date" class="form-label">End Date:</label>
+                    <input type="date" id="ending_date" name="ending_date" class="form-control" value="{{ ending_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-danger w-100 me-2">Generate Report</button>
+                    <a href="{% url 'attendance:export_absentee_csv' %}?starting_date={{ starting_date|date:'Y-m-d'|default:'' }}&ending_date={{ ending_date|date:'Y-m-d'|default:'' }}" class="btn btn-outline-danger w-100">Export to CSV</a>
+                </div>
+            </form>
+
+            <hr class="my-4">
+
+            {% if error_message %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    {{ error_message }}
+                </div>
+            {% elif absentee_data %}
+                {% for day_data in absentee_data %}
+                    <h4 class="mt-4 border-bottom pb-2">Absentee Report for {{ day_data.date|date:"F d, Y" }}</h4>
+                    {% if day_data.absent_employees %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Employee ID</th>
+                                        <th>Employee Name</th>
+                                        <th>RFID Tag</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for employee in day_data.absent_employees %}
+                                        <tr>
+                                            <td>{{ employee.employee_id }}</td>
+                                            <td>{{ employee.name }}</td>
+                                            <td>{{ employee.rfid_tag|default:"N/A" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success mt-3" role="alert">
+                            All employees were present on {{ day_data.date|date:"F d, Y" }}.
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info mt-3" role="alert">
+                    Please select a date range to generate the absentee report.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}
