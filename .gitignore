@@ -1,3 +1,4 @@
-.attend
+ENV/
 attendance_error.log
 attendance.log
+attendance/__pycache__/

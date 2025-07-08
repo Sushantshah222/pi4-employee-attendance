@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# Activate your virtual environment
-source /home/pi20/pi4-employee-attendance/attend/bin/activate
+# Activate virtual environment
+source /home/pi0/pi4-employee-attendance/ENV/bin/activate
 
-# Change to your project directory
-cd /home/pi20/pi4-employee-attendance
+# Go to project folder
+cd /home/pi0/pi4-employee-attendance
 
-# Start Django server
-python3 manage.py runserver 192.168.1.123:8000 &
+# Start Django server in background
+python3 manage.py runserver 192.168.1.149:8000 &
+
+# Wait for the server to be ready
+sleep 10
 
 # Start RFID reader script
 python3 read_keyboard_events.py

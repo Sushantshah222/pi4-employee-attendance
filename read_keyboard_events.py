@@ -11,7 +11,7 @@ from evdev import InputDevice, categorize, ecodes
 
 # --- Configuration ---
 DEVICE_PATH = '/dev/input/by-id/usb-IC_Reader_IC_Reader_08FF20171101-event-kbd'
-API_URL = 'http://192.168.1.123:8000/api/attendance/record/' # Replace with your Django API URL
+API_URL = 'http://192.168.1.149:8000/api/attendance/record/' # Replace with your Django API URL
 TOKEN = os.environ.get('RFID_API_TOKEN', 'eeff5e0ee72f42cc33a330b78be5cfd289278194') # Replace or set env var
 
 # SQLite Database Path
